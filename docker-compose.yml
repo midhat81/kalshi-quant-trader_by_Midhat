@@ -1,0 +1,24 @@
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: quant_trader_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quant_trader
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: quant_trader_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+volumes:
+  postgres_data:
