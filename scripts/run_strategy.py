@@ -10,6 +10,7 @@ from app.models.risk_decision import RiskDecision
 from app.services.probability import estimate_probability
 from app.services.strategy import generate_signal
 from app.services.risk import check_signal
+from app.services.audit import log_event, SIGNAL_CREATED, RISK_CHECKED
 
 
 def main():
@@ -43,6 +44,20 @@ def main():
             db.flush()  # get db_signal.id before commit
             signals_created += 1
 
+            log_event(
+                db,
+                event_type=SIGNAL_CREATED,
+                market_id=signal.market_id,
+                signal_id=db_signal.id,
+                payload={
+                    "side": signal.side,
+                    "edge": signal.edge,
+                    "confidence": signal.confidence,
+                    "market_probability": signal.market_probability,
+                    "model_probability": signal.model_probability,
+                },
+            )
+
             risk_result = check_signal(signal)
 
             db_risk = RiskDecision(
@@ -55,6 +70,18 @@ def main():
             )
             db.add(db_risk)
 
+            log_event(
+                db,
+                event_type=RISK_CHECKED,
+                market_id=signal.market_id,
+                signal_id=db_signal.id,
+                payload={
+                    "approved": risk_result.approved,
+                    "reason": risk_result.reason,
+                    "proposed_size": risk_result.proposed_size,
+                },
+            )
+
             status = "APPROVED" if risk_result.approved else "REJECTED"
             print(
                 f"{signal.market_id:25} | SIGNAL: BUY {signal.side.upper()} "
@@ -63,7 +90,7 @@ def main():
             )
 
         db.commit()
-        print(f"\nStored {signals_created} signals with risk decisions.")
+        print(f"\nStored {signals_created} signals with risk decisions and audit events.")
     finally:
         db.close()
 
