@@ -6,6 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "backend"))
 from app.core.database import Base, engine
 from app.models.market_snapshot import MarketSnapshot  # noqa: F401
 from app.models.signal import Signal  # noqa: F401
+from app.models.risk_decision import RiskDecision  # noqa: F401
 
 
 def init_db():
