@@ -52,17 +52,27 @@ class KalshiClient:
     def _request(self, method: str, path: str, params: Optional[dict] = None, json_body: Optional[dict] = None) -> Any:
         headers = self._headers(method, path)
         response = self._client.request(method, path, headers=headers, params=params, json=json_body)
+        if response.status_code >= 400:
+            print(f"Kalshi API error {response.status_code}: {response.text}")
         response.raise_for_status()
         return response.json()
 
     # ---------- Market data ----------
 
-    def get_markets(self, limit: int = 100, cursor: Optional[str] = None, status: Optional[str] = None) -> dict:
+    def get_markets(
+        self,
+        limit: int = 100,
+        cursor: Optional[str] = None,
+        status: Optional[str] = None,
+        series_ticker: Optional[str] = None,
+    ) -> dict:
         params = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
         if status:
             params["status"] = status
+        if series_ticker:
+            params["series_ticker"] = series_ticker
         return self._request("GET", "/markets", params=params)
 
     def get_market(self, ticker: str) -> dict:
@@ -70,6 +80,18 @@ class KalshiClient:
 
     def get_orderbook(self, ticker: str) -> dict:
         return self._request("GET", f"/markets/{ticker}/orderbook")
+
+    def get_series_list(self, category: Optional[str] = None) -> dict:
+        params = {"category": category} if category else None
+        return self._request("GET", "/series", params=params)
+
+    def get_events(self, limit: int = 50, status: Optional[str] = None, series_ticker: Optional[str] = None) -> dict:
+        params = {"limit": limit}
+        if status:
+            params["status"] = status
+        if series_ticker:
+            params["series_ticker"] = series_ticker
+        return self._request("GET", "/events", params=params)
 
     # ---------- Account ----------
 
