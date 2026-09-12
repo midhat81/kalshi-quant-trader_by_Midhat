@@ -8,6 +8,8 @@ from app.models.market_snapshot import MarketSnapshot  # noqa: F401
 from app.models.signal import Signal  # noqa: F401
 from app.models.risk_decision import RiskDecision  # noqa: F401
 from app.models.event import Event  # noqa: F401
+from app.models.order import Order  # noqa: F401
+from app.models.fill import Fill  # noqa: F401
 
 
 def init_db():
