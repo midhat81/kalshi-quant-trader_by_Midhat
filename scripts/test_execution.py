@@ -12,7 +12,7 @@ def main():
     try:
         order = execute_signal_order(
             db,
-            market_id="KXHIGHNY-26SEP12-B77.5",
+            market_id="KXHIGHNY-26SEP13-B78.5",
             side="yes",
             quantity=10,
             limit_price=0.99,
