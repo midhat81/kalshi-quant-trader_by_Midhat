@@ -57,3 +57,32 @@ export interface MarketSnapshot {
     open_position_count: number;
     positions_missing_price_count: number;
   }
+  export interface Fill {
+    id: string;
+    order_id: string;
+    market_id: string;
+    price: number;
+    quantity: number;
+    fee: number;
+    timestamp: string;
+  }
+
+  export interface RiskDecision {
+    id: string;
+    signal_id: string | null;
+    market_id: string;
+    timestamp: string;
+    approved: boolean;
+    reason: string | null;
+    proposed_side: string;
+    proposed_size: number;
+  }
+  
+  export interface RiskLimits {
+    max_position_size: number;
+    max_market_exposure_usd: number;
+    max_portfolio_exposure_usd: number;
+    max_daily_loss_usd: number;
+    max_open_positions: number;
+    default_order_size: number;
+  }
