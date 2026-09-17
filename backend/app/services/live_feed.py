@@ -1,10 +1,9 @@
 import asyncio
-import base64
 import json
 import time
 from typing import Any
 
-import websockets
+from websockets.asyncio.client import connect
 
 from app.adapters.kalshi import kalshi_client
 from app.core.config import settings
@@ -19,7 +18,6 @@ class LiveMarketFeed:
     def __init__(self) -> None:
         self.clients: set[Any] = set()
         self.task: asyncio.Task | None = None
-        self._lock = asyncio.Lock()
         self._sequence = 0
 
     def _headers(self) -> dict[str, str]:
@@ -69,7 +67,7 @@ class LiveMarketFeed:
         while self.clients:
             try:
                 headers = self._headers()
-                async with websockets.connect(
+                async with connect(
                     self.WS_URL,
                     additional_headers=headers,
                     ping_interval=None,
