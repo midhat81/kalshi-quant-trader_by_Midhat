@@ -6,13 +6,32 @@ import type { MarketSnapshot } from "../types";
 
 function fmtPrice(n: number | null): string { return n === null ? "—" : n.toFixed(2); }
 
+function liveLabel(status: string): string {
+  switch (status) {
+    case "connected": return "KALSHI WS LIVE";
+    case "authenticating": return "KALSHI AUTH";
+    case "subscribing": return "SUBSCRIBING";
+    case "reconnecting": return "RECONNECTING";
+    case "error": return "WS ERROR";
+    case "no_markets": return "NO MARKETS";
+    default: return "CONNECTING";
+  }
+}
+
 export function Markets() {
   const [markets, setMarkets] = useState<MarketSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const { status: liveStatus, markets: liveMarkets, lastTick } = useLiveMarketFeed(true);
+  const {
+    status: liveStatus,
+    markets: liveMarkets,
+    liveMarketIds,
+    streamingMarkets,
+    lastTick,
+    error: liveError,
+  } = useLiveMarketFeed(true);
 
   const loadMarkets = async () => {
     setRefreshing(true); setError(null);
@@ -34,7 +53,10 @@ export function Markets() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-accent"><span className={`h-1.5 w-1.5 rounded-full ${liveStatus === "connected" ? "animate-pulse bg-accent" : "bg-warning"}`} />Market monitor <span className="text-subtle">/</span> {liveStatus === "connected" ? "LIVE" : liveStatus.toUpperCase()}</div>
+          <div className="mb-2 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-accent">
+            <span className={`h-1.5 w-1.5 rounded-full ${liveStatus === "connected" ? "animate-pulse bg-accent" : "bg-warning"}`} />
+            Market monitor <span className="text-subtle">/</span> {liveLabel(liveStatus)}
+          </div>
           <h1 className="text-2xl font-semibold tracking-tight text-text">Markets</h1>
           <p className="mt-1 text-sm text-muted">Live market snapshots, liquidity and trading conditions.</p>
         </div>
@@ -44,19 +66,30 @@ export function Markets() {
         </div>
       </header>
 
+      {liveError && liveStatus !== "connected" && (
+        <div className="border border-warning/30 bg-warning/5 px-4 py-3 font-mono text-[11px] text-warning">
+          KALSHI WS: {liveError}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-border bg-surface p-4"><div className="text-[10px] uppercase tracking-[0.12em] text-muted">Markets tracked</div><div className="mt-2 font-mono text-xl text-text">{mergedMarkets.length}</div></div>
         <div className="rounded-xl border border-border bg-surface p-4"><div className="text-[10px] uppercase tracking-[0.12em] text-muted">Active</div><div className="mt-2 font-mono text-xl text-accent">{mergedMarkets.filter((m) => m.status === "active").length}</div></div>
         <div className="rounded-xl border border-border bg-surface p-4"><div className="text-[10px] uppercase tracking-[0.12em] text-muted">Volume</div><div className="mt-2 font-mono text-xl text-text">{mergedMarkets.reduce((sum, m) => sum + (m.volume ?? 0), 0).toLocaleString()}</div></div>
-        <div className="rounded-xl border border-border bg-surface p-4"><div className="text-[10px] uppercase tracking-[0.12em] text-muted">Showing</div><div className="mt-2 font-mono text-xl text-text">{filteredMarkets.length}</div></div>
+        <div className="rounded-xl border border-border bg-surface p-4"><div className="text-[10px] uppercase tracking-[0.12em] text-muted">WS streaming</div><div className="mt-2 font-mono text-xl text-text">{streamingMarkets || 0}</div></div>
       </div>
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4"><div className="flex items-center gap-2 text-sm font-semibold text-text"><Activity size={15} className="text-accent" />Market data <span className="ml-1 inline-flex items-center gap-1 border border-accent/20 bg-accent-soft px-1.5 py-1 font-mono text-[8px] font-bold uppercase text-accent"><Wifi size={9} /> {liveStatus === "connected" ? "WS LIVE" : "REST"}</span></div><span className="font-mono text-[10px] text-muted">{lastTick ? `TICK ${lastTick.toLocaleTimeString(undefined, { hour12: false })}` : `${filteredMarkets.length} / ${mergedMarkets.length}`}</span></div>
+        <div className="flex flex-col gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-text"><Activity size={15} className="text-accent" />Market data <span className={`ml-1 inline-flex items-center gap-1 border px-1.5 py-1 font-mono text-[8px] font-bold uppercase ${liveStatus === "connected" ? "border-accent/20 bg-accent-soft text-accent" : "border-warning/20 bg-warning/5 text-warning"}`}><Wifi size={9} /> {liveLabel(liveStatus)}</span></div>
+          <span className="font-mono text-[10px] text-muted">
+            {lastTick ? `LAST TICK ${lastTick.toLocaleTimeString(undefined, { hour12: false })}` : `${streamingMarkets ? `${streamingMarkets} STREAMING` : "WAITING FOR STREAM"} · ${filteredMarkets.length}/${mergedMarkets.length} DISPLAYED`}
+          </span>
+        </div>
         <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm">
           <thead className="border-b border-border bg-bg/40 text-[10px] uppercase tracking-wider text-muted"><tr><th className="px-5 py-3 text-left font-medium">Market</th><th className="px-3 py-3 text-right font-medium">Yes Bid</th><th className="px-3 py-3 text-right font-medium">Yes Ask</th><th className="px-3 py-3 text-right font-medium">Spread</th><th className="px-3 py-3 text-right font-medium">Volume</th><th className="px-5 py-3 text-right font-medium">Status</th></tr></thead>
-          <tbody>{filteredMarkets.map((m) => { const spread = m.spread ?? 0; return <tr key={m.market_id} className="border-b border-border/60 transition hover:bg-bg/35">
-            <td className="px-5 py-3.5"><div className="font-mono text-xs text-text">{m.market_id}</div><div className="mt-1 text-[10px] text-muted">{liveMap.has(m.market_id) ? "WebSocket tick" : `REST snapshot ${new Date(m.timestamp).toLocaleTimeString()}`}</div></td>
+          <tbody>{filteredMarkets.map((m) => { const spread = m.spread ?? 0; const isLive = liveMarketIds.has(m.market_id); return <tr key={m.market_id} className="border-b border-border/60 transition hover:bg-bg/35">
+            <td className="px-5 py-3.5"><div className="font-mono text-xs text-text">{m.market_id}</div><div className="mt-1 text-[10px] text-muted">{isLive ? "Kalshi WebSocket tick" : "REST snapshot"}</div></td>
             <td className="px-3 py-3.5 text-right font-mono text-xs text-text">{fmtPrice(m.yes_bid)}</td><td className="px-3 py-3.5 text-right font-mono text-xs text-text">{fmtPrice(m.yes_ask)}</td>
             <td className="px-3 py-3.5 text-right font-mono text-xs text-muted"><span className="inline-flex items-center gap-1">{spread > 0.05 ? <ArrowUp size={11} /> : <ArrowDown size={11} />}{fmtPrice(m.spread)}</span></td>
             <td className="px-3 py-3.5 text-right font-mono text-xs text-muted">{m.volume !== null ? m.volume.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—"}</td>
