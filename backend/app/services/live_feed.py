@@ -3,7 +3,7 @@ import json
 import time
 from typing import Any
 
-from websockets.asyncio.client import connect
+from websockets import connect
 
 from app.adapters.kalshi import kalshi_client
 from app.core.config import settings
