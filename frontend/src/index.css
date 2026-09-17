@@ -1,20 +1,77 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0B0F1A;
-  --color-surface: #131826;
-  --color-border: #1E2536;
-  --color-text: #E8EAF0;
-  --color-muted: #7C859C;
-  --color-accent: #4FD1C5;
-  --color-warning: #E8735F;
+  --color-bg: #090c12;
+  --color-surface: #0f141c;
+  --color-surface-raised: #131a24;
+  --color-border: #1d2633;
+  --color-border-strong: #2a3545;
+  --color-text: #edf1f7;
+  --color-muted: #7f8a9d;
+  --color-subtle: #5d6879;
+  --color-accent: #4fd1c5;
+  --color-accent-soft: rgba(79, 209, 197, 0.1);
+  --color-warning: #e8735f;
+  --color-positive: #4fd1c5;
 
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+:root {
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+}
+
 body {
-  background-color: var(--color-bg);
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+}
+
+button,
+a,
+input,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(79, 209, 197, 0.18);
+  color: var(--color-text);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #263141;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #344154;
 }
