@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, ChevronRight, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
 import { api } from "../api/client";
 import type { Position, PortfolioSummary, Signal } from "../types";
 
@@ -8,15 +8,8 @@ function fmtUsd(n: number | null): string {
   const sign = n < 0 ? "-" : "";
   return `${sign}$${Math.abs(n).toFixed(2)}`;
 }
-
-function fmtPrice(n: number | null): string {
-  return n === null ? "—" : n.toFixed(2);
-}
-
-function fmtPct(n: number): string {
-  return `${n >= 0 ? "+" : ""}${(n * 100).toFixed(2)}%`;
-}
-
+function fmtPrice(n: number | null): string { return n === null ? "—" : n.toFixed(2); }
+function fmtPct(n: number): string { return `${n >= 0 ? "+" : ""}${(n * 100).toFixed(2)}%`; }
 function timeAgo(timestamp: string): string {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
@@ -25,13 +18,15 @@ function timeAgo(timestamp: string): string {
   return `${Math.floor(minutes / 60)}h ago`;
 }
 
-function SectionHeader({ title, subtitle, icon: Icon }: { title: string; subtitle?: string; icon: typeof Activity }) {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-bg text-accent"><Icon size={15} strokeWidth={1.8} /></div>
-      <div><h2 className="text-sm font-semibold text-text">{title}</h2>{subtitle && <p className="mt-0.5 text-[11px] text-muted">{subtitle}</p>}</div>
-    </div>
-  );
+function Label({ children }: { children: React.ReactNode }) {
+  return <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-subtle">{children}</div>;
+}
+
+function PanelTitle({ icon: Icon, title, detail }: { icon: typeof Activity; title: string; detail: string }) {
+  return <div className="flex items-center justify-between border-b border-border px-5 py-4">
+    <div className="flex items-center gap-2.5"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-bg text-accent"><Icon size={14} strokeWidth={1.8} /></span><div><div className="text-xs font-medium text-text">{title}</div><div className="mt-0.5 text-[10px] text-muted">{detail}</div></div></div>
+    <ChevronRight size={14} className="text-subtle" />
+  </div>;
 }
 
 export function Dashboard() {
@@ -63,64 +58,65 @@ export function Dashboard() {
   const pnlPositive = totalPnl >= 0;
   const exposure = pnl?.total_exposure ?? 0;
   const maxPosition = useMemo(() => positions.reduce((max, p) => Math.max(max, Math.abs(p.market_value ?? 0)), 0), [positions]);
+  const activePositions = pnl?.open_position_count ?? positions.length;
 
-  if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="flex items-center gap-3 text-sm text-muted"><RefreshCw size={15} className="animate-spin" />Loading portfolio data...</div></div>;
+  if (loading) return <div className="flex min-h-[60vh] items-center justify-center"><div className="flex items-center gap-3 text-xs text-muted"><RefreshCw size={14} className="animate-spin text-accent" />Loading trading terminal…</div></div>;
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5">
+      <header className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-accent"><span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(79,209,197,0.65)]" />Live portfolio</div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Trading overview</h1>
-          <p className="mt-1 text-sm text-muted">Real-time paper trading performance and execution signals.</p>
+          <div className="mb-2 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_10px_rgba(85,214,199,0.65)]" /><span className="font-mono text-[9px] uppercase tracking-[0.18em] text-accent">Portfolio / live</span></div>
+          <h1 className="text-[27px] font-semibold tracking-[-0.035em] text-text">Trading overview</h1>
+          <p className="mt-1 text-xs text-muted">Real market data · model signals · simulated execution</p>
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted">
-          <div className="rounded-lg border border-border bg-surface px-3 py-2 font-mono">{now.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}<span className="mx-2 text-border">•</span>{now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</div>
-          <button type="button" onClick={() => void loadDashboard()} disabled={refreshing} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-text transition hover:border-accent/40 hover:bg-surface/80 disabled:opacity-50"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />Refresh</button>
+        <div className="flex items-center gap-2">
+          <div className="hidden rounded-lg border border-border bg-surface px-3 py-2 text-[10px] text-muted sm:block"><span>{now.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" })}</span><span className="mx-2 text-subtle">·</span><span className="font-mono tabular-nums text-text">{now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></div>
+          <button type="button" onClick={() => void loadDashboard()} disabled={refreshing} className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[11px] font-medium text-text transition hover:border-border-strong hover:bg-surface-raised disabled:opacity-50"><RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />Refresh</button>
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        {[
-          ["Total PnL", fmtUsd(pnl?.total_pnl ?? null), pnlPositive ? "text-accent" : "text-warning", "Portfolio performance"],
-          ["Realized", fmtUsd(pnl?.total_realized_pnl ?? 0), "text-text", "Locked PnL"],
-          ["Unrealized", fmtUsd(pnl?.total_unrealized_pnl ?? null), "text-text", "Open positions"],
-          ["Exposure", fmtUsd(exposure), "text-text", "Capital at risk"],
-          ["Open positions", String(pnl?.open_position_count ?? 0), "text-text", "Active markets"],
-        ].map(([label, value, tone, hint]) => (
-          <div key={label} className="rounded-xl border border-border bg-surface p-4 transition hover:border-border/80 hover:bg-surface/80">
-            <div className="mb-3 text-[10px] uppercase tracking-[0.12em] text-muted">{label}</div>
-            <div className={`font-mono text-xl font-semibold tracking-tight ${tone}`}>{value}</div>
-            <div className="mt-2 text-[11px] text-muted">{hint}</div>
-          </div>
-        ))}
-      </div>
+      <section className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-5">
+          <div className="p-5"><Label>Total PnL</Label><div className={`mt-2 font-mono text-[23px] font-semibold tracking-tight ${pnlPositive ? "text-accent" : "text-warning"}`}>{fmtUsd(pnl?.total_pnl ?? null)}</div><div className="mt-1 flex items-center gap-1 text-[10px] text-muted"><TrendingUp size={11} />Portfolio performance</div></div>
+          <div className="p-5"><Label>Realized</Label><div className="mt-2 font-mono text-[20px] font-semibold tracking-tight text-text">{fmtUsd(pnl?.total_realized_pnl ?? 0)}</div><div className="mt-1 text-[10px] text-muted">Locked PnL</div></div>
+          <div className="p-5"><Label>Unrealized</Label><div className="mt-2 font-mono text-[20px] font-semibold tracking-tight text-text">{fmtUsd(pnl?.total_unrealized_pnl ?? null)}</div><div className="mt-1 text-[10px] text-muted">Open positions</div></div>
+          <div className="p-5"><Label>Exposure</Label><div className="mt-2 font-mono text-[20px] font-semibold tracking-tight text-text">{fmtUsd(exposure)}</div><div className="mt-1 text-[10px] text-muted">Capital deployed</div></div>
+          <div className="p-5"><Label>Open positions</Label><div className="mt-2 font-mono text-[20px] font-semibold tracking-tight text-text">{activePositions}</div><div className="mt-1 text-[10px] text-muted">Active inventory</div></div>
+        </div>
+      </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.9fr)]">
         <section className="overflow-hidden rounded-xl border border-border bg-surface">
-          <div className="p-5 pb-0"><SectionHeader title="Open positions" subtitle="Current portfolio inventory" icon={BarChart3} /></div>
-          {positions.length === 0 ? <div className="px-5 pb-6 text-sm text-muted">No open positions yet.</div> : <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-sm">
-            <thead className="border-y border-border bg-bg/40 text-[10px] uppercase tracking-wider text-muted"><tr><th className="px-5 py-3 text-left font-medium">Market</th><th className="px-3 py-3 text-left font-medium">Side</th><th className="px-3 py-3 text-right font-medium">Qty</th><th className="px-3 py-3 text-right font-medium">Entry</th><th className="px-3 py-3 text-right font-medium">Current</th><th className="px-5 py-3 text-right font-medium">PnL</th></tr></thead>
-            <tbody>{positions.map((p) => { const positive = (p.unrealized_pnl ?? 0) >= 0; return <tr key={`${p.market_id}-${p.side}`} className="border-b border-border/60 transition hover:bg-bg/35">
-              <td className="px-5 py-3.5 font-mono text-xs text-text">{p.market_id}</td><td className="px-3 py-3.5"><span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-semibold uppercase ${p.side === "yes" ? "border-accent/25 bg-accent/10 text-accent" : "border-warning/25 bg-warning/10 text-warning"}`}>{p.side}</span></td><td className="px-3 py-3.5 text-right font-mono text-xs text-text">{p.quantity}</td><td className="px-3 py-3.5 text-right font-mono text-xs text-muted">{fmtPrice(p.average_entry_price)}</td><td className="px-3 py-3.5 text-right font-mono text-xs text-muted">{fmtPrice(p.current_price)}</td><td className={`px-5 py-3.5 text-right font-mono text-xs font-medium ${p.unrealized_pnl === null ? "text-muted" : positive ? "text-accent" : "text-warning"}`}>{p.unrealized_pnl === null ? "—" : fmtUsd(p.unrealized_pnl)}</td>
+          <PanelTitle title="Open positions" detail="Current portfolio inventory" icon={BarChart3} />
+          {positions.length === 0 ? <div className="px-5 py-12 text-center"><div className="text-xs text-text">No open positions</div><div className="mt-1 text-[10px] text-muted">Inventory will appear here after execution.</div></div> : <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-xs">
+            <thead className="bg-bg/45 font-mono text-[9px] uppercase tracking-[0.12em] text-subtle"><tr><th className="px-5 py-3 text-left font-medium">Market</th><th className="px-3 py-3 text-left font-medium">Side</th><th className="px-3 py-3 text-right font-medium">Qty</th><th className="px-3 py-3 text-right font-medium">Entry</th><th className="px-3 py-3 text-right font-medium">Mark</th><th className="px-5 py-3 text-right font-medium">PnL</th></tr></thead>
+            <tbody>{positions.map((p) => { const positive = (p.unrealized_pnl ?? 0) >= 0; return <tr key={`${p.market_id}-${p.side}`} className="group border-t border-border/70 transition-colors hover:bg-surface-hover">
+              <td className="px-5 py-3.5"><div className="font-mono text-[11px] font-medium text-text">{p.market_id}</div><div className="mt-0.5 text-[9px] text-subtle">{p.market_status ?? "market"}</div></td>
+              <td className="px-3 py-3.5"><span className={`inline-flex rounded-md border px-2 py-1 font-mono text-[9px] font-semibold uppercase ${p.side === "yes" ? "border-accent/20 bg-accent-soft text-accent" : "border-warning/20 bg-warning/10 text-warning"}`}>{p.side}</span></td>
+              <td className="px-3 py-3.5 text-right font-mono tabular-nums text-[11px] text-text">{p.quantity}</td>
+              <td className="px-3 py-3.5 text-right font-mono tabular-nums text-[11px] text-muted">{fmtPrice(p.average_entry_price)}</td>
+              <td className="px-3 py-3.5 text-right font-mono tabular-nums text-[11px] text-muted">{fmtPrice(p.current_price)}</td>
+              <td className={`px-5 py-3.5 text-right font-mono tabular-nums text-[11px] font-semibold ${p.unrealized_pnl === null ? "text-muted" : positive ? "text-accent" : "text-warning"}`}>{p.unrealized_pnl === null ? "—" : <span className="inline-flex items-center gap-1">{positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{fmtUsd(p.unrealized_pnl)}</span>}</td>
             </tr>; })}</tbody>
           </table></div>}
         </section>
 
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <SectionHeader title="Recent signals" subtitle="Model edge and confidence" icon={Activity} />
-          {signals.length === 0 ? <p className="text-sm text-muted">No signals generated yet.</p> : <div className="space-y-2">{signals.map((s) => { const positive = s.edge >= 0; return <div key={s.id} className="rounded-lg border border-border/70 bg-bg/45 p-3 transition hover:border-border hover:bg-bg/65">
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="truncate font-mono text-xs text-text">{s.market_id}</div><div className="mt-1 flex items-center gap-2 text-[10px] text-muted"><span className={`font-semibold uppercase ${s.side === "yes" ? "text-accent" : "text-warning"}`}>{s.side}</span><span>•</span><span>{s.strategy_name}</span></div></div><div className={`flex items-center gap-1 font-mono text-xs font-semibold ${positive ? "text-accent" : "text-warning"}`}>{positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}{fmtPct(s.edge)}</div></div>
-            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3"><div><div className="text-[9px] uppercase tracking-wide text-muted">Market</div><div className="mt-1 font-mono text-xs text-text">{(s.market_probability * 100).toFixed(1)}%</div></div><div><div className="text-[9px] uppercase tracking-wide text-muted">Model</div><div className="mt-1 font-mono text-xs text-text">{(s.model_probability * 100).toFixed(1)}%</div></div><div><div className="text-[9px] uppercase tracking-wide text-muted">Confidence</div><div className="mt-1 font-mono text-xs text-text">{(s.confidence * 100).toFixed(0)}%</div></div></div>
-            <div className="mt-2 text-[10px] text-muted">{timeAgo(s.timestamp)}</div>
+        <section className="overflow-hidden rounded-xl border border-border bg-surface">
+          <PanelTitle title="Signal monitor" detail="Latest model opportunities" icon={Activity} />
+          {signals.length === 0 ? <div className="px-5 py-12 text-center text-[10px] text-muted">No signals generated yet.</div> : <div className="divide-y divide-border">{signals.map((s) => { const positive = s.edge >= 0; return <div key={s.id} className="p-4 transition-colors hover:bg-surface-hover">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="truncate font-mono text-[10px] font-medium text-text">{s.market_id}</div><div className="mt-1 flex items-center gap-2"><span className={`font-mono text-[9px] font-semibold uppercase ${s.side === "yes" ? "text-accent" : "text-warning"}`}>{s.side}</span><span className="text-[9px] text-subtle">{s.strategy_name}</span></div></div><div className={`flex items-center gap-0.5 font-mono text-[11px] font-semibold ${positive ? "text-accent" : "text-warning"}`}>{positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{fmtPct(s.edge)}</div></div>
+            <div className="mt-3 grid grid-cols-3 gap-3"><div><Label>Market</Label><div className="mt-1 font-mono text-[11px] text-text">{(s.market_probability * 100).toFixed(1)}%</div></div><div><Label>Model</Label><div className="mt-1 font-mono text-[11px] text-text">{(s.model_probability * 100).toFixed(1)}%</div></div><div><Label>Confidence</Label><div className="mt-1 font-mono text-[11px] text-text">{(s.confidence * 100).toFixed(0)}%</div></div></div>
+            <div className="mt-3 h-1 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-accent/70" style={{ width: `${Math.min(100, Math.max(0, s.confidence * 100))}%` }} /></div>
+            <div className="mt-2 flex items-center justify-between text-[9px] text-subtle"><span>{s.reason ?? "Model signal"}</span><span className="font-mono">{timeAgo(s.timestamp)}</span></div>
           </div>; })}</div>}
         </section>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-4"><div className="flex items-center gap-2 text-xs font-medium text-text"><ShieldCheck size={14} className="text-accent" />Risk posture</div><div className="mt-3 font-mono text-sm text-muted">{pnl?.open_position_count ?? 0} active positions</div><div className="mt-1 text-[11px] text-muted">{fmtUsd(exposure)} total exposure</div></div>
-        <div className="rounded-xl border border-border bg-surface p-4"><div className="text-xs font-medium text-text">Largest position</div><div className="mt-3 font-mono text-sm text-text">{fmtUsd(maxPosition)}</div><div className="mt-1 text-[11px] text-muted">Current market value</div></div>
-        <div className="rounded-xl border border-border bg-surface p-4"><div className="text-xs font-medium text-text">Data status</div><div className="mt-3 flex items-center gap-2 font-mono text-sm text-accent"><span className="h-1.5 w-1.5 rounded-full bg-accent" />Connected</div><div className="mt-1 text-[11px] text-muted">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : "Waiting for update"}</div></div>
+      <div className="grid gap-5 md:grid-cols-3">
+        <section className="rounded-xl border border-border bg-surface p-5"><div className="flex items-center gap-2"><ShieldCheck size={14} className="text-accent" /><Label>Risk posture</Label></div><div className="mt-3 text-sm font-medium text-text">{activePositions} active positions</div><div className="mt-1 font-mono text-[10px] text-muted">{fmtUsd(exposure)} total exposure</div></section>
+        <section className="rounded-xl border border-border bg-surface p-5"><Label>Largest position</Label><div className="mt-3 font-mono text-lg font-semibold text-text">{fmtUsd(maxPosition)}</div><div className="mt-1 text-[10px] text-muted">Current market value</div></section>
+        <section className="rounded-xl border border-border bg-surface p-5"><Label>System status</Label><div className="mt-3 flex items-center gap-2 text-sm font-medium text-accent"><span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(85,214,199,0.6)]" />Connected</div><div className="mt-1 text-[10px] text-muted">{lastUpdated ? `API updated ${lastUpdated.toLocaleTimeString()}` : "Waiting for update"}</div></section>
       </div>
     </div>
   );
