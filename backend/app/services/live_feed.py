@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from websockets import connect
+from websockets.legacy.client import connect
 
 from app.adapters.kalshi import kalshi_client
 from app.core.config import settings
@@ -107,7 +107,7 @@ class LiveMarketFeed:
 
                 async with connect(
                     self.WS_URL,
-                    additional_headers=headers,
+                    extra_headers=headers,
                     ping_interval=None,
                     close_timeout=5,
                 ) as ws:
@@ -178,8 +178,6 @@ class LiveMarketFeed:
                             continue
 
                         msg = message.get("msg", message)
-                        # Current Kalshi ticker messages identify the market as
-                        # market_ticker. Keep ticker as a compatibility fallback.
                         ticker = msg.get("market_ticker") or msg.get("ticker")
                         if not ticker:
                             logger.warning("Kalshi ticker message missing market ticker: %s", message)
