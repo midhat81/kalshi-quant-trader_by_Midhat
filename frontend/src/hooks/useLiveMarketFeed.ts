@@ -1,11 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { MarketSnapshot } from "../types";
 
-export type LiveFeedStatus = "connecting" | "connected" | "reconnecting" | "offline";
+export type LiveFeedStatus =
+  | "connecting"
+  | "authenticating"
+  | "subscribing"
+  | "connected"
+  | "reconnecting"
+  | "error"
+  | "no_markets"
+  | "offline";
 
 type LiveMessage =
-  | { type: "status"; status: LiveFeedStatus | "no_markets"; markets?: number; error?: string }
-  | ({ type: "ticker" } & MarketSnapshot & { last_price?: number | null });
+  | {
+      type: "status";
+      status: LiveFeedStatus;
+      markets?: number;
+      error?: string;
+    }
+  | ({ type: "ticker" } & MarketSnapshot & {
+      last_price?: number | null;
+      source?: "rest_snapshot" | "kalshi_ws";
+    });
 
 function wsUrl(): string {
   const base = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -18,7 +34,10 @@ function wsUrl(): string {
 export function useLiveMarketFeed(enabled = true) {
   const [status, setStatus] = useState<LiveFeedStatus>(enabled ? "connecting" : "offline");
   const [markets, setMarkets] = useState<Record<string, MarketSnapshot>>({});
+  const [liveMarketIds, setLiveMarketIds] = useState<Set<string>>(new Set());
+  const [streamingMarkets, setStreamingMarkets] = useState(0);
   const [lastTick, setLastTick] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const retryRef = useRef<number | null>(null);
   const stoppedRef = useRef(false);
@@ -35,19 +54,24 @@ export function useLiveMarketFeed(enabled = true) {
     const connect = () => {
       if (stoppedRef.current) return;
       setStatus("connecting");
+      setError(null);
       const socket = new WebSocket(wsUrl());
       socketRef.current = socket;
 
       socket.onopen = () => {
+        // Browser -> FastAPI is connected. Wait for the backend to confirm
+        // the authenticated Kalshi connection before calling this LIVE.
         retryMs = 1000;
-        setStatus("connected");
       };
 
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data) as LiveMessage;
           if (message.type === "status") {
-            if (message.status === "connected" || message.status === "reconnecting") setStatus(message.status);
+            setStatus(message.status);
+            if (typeof message.markets === "number") setStreamingMarkets(message.markets);
+            if (message.error) setError(message.error);
+            if (message.status !== "error" && message.status !== "reconnecting") setError(null);
             return;
           }
           if (message.type !== "ticker") return;
@@ -64,9 +88,17 @@ export function useLiveMarketFeed(enabled = true) {
             status: message.status,
           };
           setMarkets((current) => ({ ...current, [snapshot.market_id]: snapshot }));
-          setLastTick(new Date(snapshot.timestamp));
+
+          if (message.source === "kalshi_ws") {
+            setLiveMarketIds((current) => {
+              const next = new Set(current);
+              next.add(snapshot.market_id);
+              return next;
+            });
+            setLastTick(new Date(snapshot.timestamp));
+          }
         } catch {
-          // Ignore malformed upstream messages; REST remains the fallback.
+          // Ignore malformed messages; REST remains the fallback.
         }
       };
 
@@ -89,5 +121,12 @@ export function useLiveMarketFeed(enabled = true) {
     };
   }, [enabled]);
 
-  return { status, markets: Object.values(markets), lastTick };
+  return {
+    status,
+    markets: Object.values(markets),
+    liveMarketIds,
+    streamingMarkets,
+    lastTick,
+    error,
+  };
 }
