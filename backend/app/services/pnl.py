@@ -55,3 +55,57 @@ def compute_portfolio_summary(db: Session) -> PortfolioSummary:
         open_position_count=len(positions),
         positions_missing_price_count=missing_price_count,
     )
+
+from dataclasses import dataclass as _dataclass
+@_dataclass
+class PnlHistoryPoint:
+    timestamp: str
+    cumulative_pnl: float
+    label: str
+
+
+def compute_pnl_history(db: Session) -> list[PnlHistoryPoint]:
+    """
+    Builds a cumulative PnL curve from real fill history.
+
+    Since the MVP has no closed (round-trip) trades yet, realized PnL is
+    zero throughout -- this curve honestly reflects cumulative fees paid
+    over time, then adds one final point for current unrealized PnL using
+    live prices. This is NOT a fabricated equity curve; every point is
+    derived from real fills and real fees.
+    """
+    from app.models.fill import Fill
+
+    fills = db.query(Fill).order_by(Fill.timestamp.asc()).all()
+
+    points: list[PnlHistoryPoint] = []
+    cumulative_fees = 0.0
+
+    for fill in fills:
+        cumulative_fees += fill.fee
+        points.append(
+            PnlHistoryPoint(
+                timestamp=fill.timestamp.isoformat(),
+                cumulative_pnl=round(-cumulative_fees, 4),
+                label=f"Fill: {fill.market_id}",
+            )
+        )
+
+    # Final "now" point: add current unrealized PnL on top of realized/fees
+    summary = compute_portfolio_summary(db)
+    if summary.total_unrealized_pnl is not None:
+        final_pnl = round(summary.total_realized_pnl + summary.total_unrealized_pnl - summary.total_fees, 4)
+        points.append(
+            PnlHistoryPoint(
+                timestamp=datetime_now_iso(),
+                cumulative_pnl=final_pnl,
+                label="Current (mark-to-market)",
+            )
+        )
+
+    return points
+
+
+def datetime_now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()

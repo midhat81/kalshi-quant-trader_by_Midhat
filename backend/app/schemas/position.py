@@ -23,3 +23,9 @@ class PortfolioSummaryOut(BaseModel):
     total_exposure: float
     open_position_count: int
     positions_missing_price_count: int
+
+
+class PnlHistoryPointOut(BaseModel):
+    timestamp: str
+    cumulative_pnl: float
+    label: str
