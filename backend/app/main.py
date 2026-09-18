@@ -2,7 +2,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import markets, signals, orders, positions, trades, risk, chat
+from app.api import markets, signals, orders, positions, trades, risk, chat, backtest
 from app.services.ws_bridge import stream_kalshi_ticks, latest_ticks, get_connection_status
 
 app = FastAPI(title="Prediction Market Quant Trader API", version="0.1.0")
@@ -22,6 +22,7 @@ app.include_router(positions.router)
 app.include_router(trades.router)
 app.include_router(risk.router)
 app.include_router(chat.router)
+app.include_router(backtest.router)
 
 WATCHED_MARKETS = ["KXHIGHNY-26SEP18-B80.5", "KXHIGHNY-26SEP18-B82.5", "KXHIGHNY-26SEP18-T80"]
 
@@ -52,8 +53,6 @@ def _tick_to_frontend_shape(market_id: str, tick: dict) -> dict:
     """
     Translates a raw Kalshi WS ticker payload into the exact shape the
     frontend's useLiveMarketFeed hook expects (matches MarketSnapshot).
-    Field names are read defensively since Kalshi's raw WS payload uses
-    slightly different keys than the REST snapshot fields.
     """
     yes_bid = _to_float(tick.get("yes_bid_dollars") or tick.get("yes_bid"))
     yes_ask = _to_float(tick.get("yes_ask_dollars") or tick.get("yes_ask"))
@@ -89,8 +88,7 @@ async def market_feed_ws(websocket: WebSocket):
     await websocket.send_json({"type": "status", "status": "authenticating"})
 
     try:
-        # Wait for the backend's own Kalshi WS bridge to report connected
-        for _ in range(20):  # up to ~10s
+        for _ in range(20):
             conn = get_connection_status()
             if conn["connected"]:
                 break
@@ -114,8 +112,6 @@ async def market_feed_ws(websocket: WebSocket):
                 "markets": len(WATCHED_MARKETS),
             })
 
-        sent_market_ids = set()
-
         while True:
             conn = get_connection_status()
 
@@ -134,7 +130,6 @@ async def market_feed_ws(websocket: WebSocket):
             else:
                 for market_id, tick in latest_ticks.items():
                     await websocket.send_json(_tick_to_frontend_shape(market_id, tick))
-                    sent_market_ids.add(market_id)
 
             await asyncio.sleep(1)
 
