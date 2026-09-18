@@ -86,3 +86,12 @@ export interface MarketSnapshot {
     max_open_positions: number;
     default_order_size: number;
   }
+  export interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
+  }
+  export interface PnlHistoryPoint {
+    timestamp: string;
+    cumulative_pnl: number;
+    label: string;
+  }
