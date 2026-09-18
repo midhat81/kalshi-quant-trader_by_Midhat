@@ -111,8 +111,8 @@ class KalshiClient:
     def create_order(self, ticker: str, side: str, action: str, count: int, price_cents: int, order_type: str = "limit") -> dict:
         body = {
             "ticker": ticker,
-            "side": side,          # "yes" or "no"
-            "action": action,      # "buy" or "sell"
+            "side": side,
+            "action": action,
             "count": count,
             "type": order_type,
             "yes_price": price_cents if side == "yes" else None,
@@ -122,6 +122,28 @@ class KalshiClient:
 
     def cancel_order(self, order_id: str) -> dict:
         return self._request("DELETE", f"/portfolio/orders/{order_id}")
+
+    # ---------- WebSocket auth ----------
+
+    def get_ws_auth_headers(self) -> dict:
+        """
+        Builds auth headers for Kalshi's WebSocket handshake.
+        Per Kalshi's docs, the signed string is: {timestamp}GET/trade-api/ws/v2
+        (no query params, no body) -- distinct from REST request signing,
+        which signs the actual request path (e.g. /markets).
+        """
+        timestamp_ms = str(int(time.time() * 1000))
+        ws_path = "/trade-api/ws/v2"
+        signature = self._sign(timestamp_ms, "GET", ws_path)
+        return {
+            "KALSHI-ACCESS-KEY": self.api_key_id,
+            "KALSHI-ACCESS-SIGNATURE": signature,
+            "KALSHI-ACCESS-TIMESTAMP": timestamp_ms,
+        }
+
+    @property
+    def ws_url(self) -> str:
+        return "wss://api.elections.kalshi.com/trade-api/ws/v2"
 
 
 kalshi_client = KalshiClient()

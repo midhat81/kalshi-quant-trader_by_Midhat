@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Trading
     trading_mode: str = "paper"  # "paper" or "live"
+    gemini_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
