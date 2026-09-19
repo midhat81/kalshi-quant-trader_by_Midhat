@@ -1,6 +1,5 @@
 ﻿import sys
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend"))
 
 from app.core.database import Base, engine
@@ -11,6 +10,7 @@ from app.models.event import Event  # noqa: F401
 from app.models.order import Order  # noqa: F401
 from app.models.fill import Fill  # noqa: F401
 from app.models.position import Position  # noqa: F401
+from app.models.calibration import CalibrationRecord  # noqa: F401
 
 def init_db():
     Base.metadata.create_all(bind=engine)

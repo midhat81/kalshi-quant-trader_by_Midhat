@@ -2,7 +2,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import markets, signals, orders, positions, trades, risk, chat, backtest
+from app.api import markets, signals, orders, positions, trades, risk, chat, backtest, calibration
 from app.services.ws_bridge import stream_kalshi_ticks, latest_ticks, get_connection_status
 
 app = FastAPI(title="Prediction Market Quant Trader API", version="0.1.0")
@@ -23,6 +23,7 @@ app.include_router(trades.router)
 app.include_router(risk.router)
 app.include_router(chat.router)
 app.include_router(backtest.router)
+app.include_router(calibration.router)
 
 WATCHED_MARKETS = ["KXHIGHNY-26SEP18-B80.5", "KXHIGHNY-26SEP18-B82.5", "KXHIGHNY-26SEP18-T80"]
 
