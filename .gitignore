@@ -29,4 +29,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Local logs
 scripts/collector_log.txt
+scripts/calibration_log.txt
