@@ -4,7 +4,7 @@ from app.services.market_data import fetch_and_store_snapshots
 
 # Real, liquid series to track over time. Extend this list as you want
 # broader historical coverage across market categories.
-TRACKED_SERIES = ["KXHIGHNY"]
+TRACKED_SERIES = ["KXHIGHNY", "KXCPIYOY"]
 
 
 def collect_snapshots(db: Session) -> dict:

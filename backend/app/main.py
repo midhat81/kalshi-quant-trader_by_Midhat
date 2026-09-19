@@ -25,7 +25,7 @@ app.include_router(chat.router)
 app.include_router(backtest.router)
 app.include_router(calibration.router)
 
-WATCHED_MARKETS = ["KXHIGHNY-26SEP18-B80.5", "KXHIGHNY-26SEP18-B82.5", "KXHIGHNY-26SEP18-T80"]
+WATCHED_MARKETS = ["KXHIGHNY-26SEP18-B80.5", "KXHIGHNY-26SEP18-B82.5", "KXHIGHNY-26SEP18-T80", "KXCPIYOY-26DEC-T4.9", "KXCPIYOY-26DEC-T4.7"]
 
 
 @app.on_event("startup")
