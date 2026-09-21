@@ -14,18 +14,32 @@ class KalshiClient:
     Adapter for Kalshi's Trade API v2.
     Handles RSA-PSS request signing and basic market/account/order operations.
     Exchange-specific logic stays isolated in this file.
+
+    The private key and HTTP client are lazy-loaded on first use, not at
+    construction time -- this means importing this module (or anything
+    that imports it) never has side effects requiring a real key file or
+    network access, which matters for test collection and CI.
     """
 
     def __init__(self):
         self.base_url = settings.kalshi_base_url.rstrip("/")
         self.api_key_id = settings.kalshi_api_key
-        self._private_key = self._load_private_key()
-        self._client = httpx.Client(base_url=self.base_url, timeout=10.0)
+        self._private_key_cache = None
+        self._client_cache = None
 
-    def _load_private_key(self):
-        key_path = settings.kalshi_private_key_full_path
-        with open(key_path, "rb") as f:
-            return serialization.load_pem_private_key(f.read(), password=None)
+    @property
+    def _private_key(self):
+        if self._private_key_cache is None:
+            key_path = settings.kalshi_private_key_full_path
+            with open(key_path, "rb") as f:
+                self._private_key_cache = serialization.load_pem_private_key(f.read(), password=None)
+        return self._private_key_cache
+
+    @property
+    def _client(self):
+        if self._client_cache is None:
+            self._client_cache = httpx.Client(base_url=self.base_url, timeout=10.0)
+        return self._client_cache
 
     def _sign(self, timestamp_ms: str, method: str, path: str) -> str:
         message = f"{timestamp_ms}{method}{path}".encode("utf-8")
