@@ -32,3 +32,4 @@ Thumbs.db
 # Local logs
 scripts/collector_log.txt
 scripts/calibration_log.txt
+scripts/signals_log.txt
